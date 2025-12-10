@@ -1,0 +1,47 @@
+name: Build New-Project from ZIP
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Extract New-Project.zip
+        shell: pwsh
+        run: |
+          # Hapus folder lama kalau ada (biar clean)
+          if (Test-Path "New-Project") {
+            Remove-Item -Recurse -Force "New-Project"
+          }
+
+          # Extract ZIP ke workspace
+          Expand-Archive -Path "New-Project.zip" -DestinationPath "."
+
+          # Cek isi setelah extract (debug)
+          Get-ChildItem -Recurse
+
+      - name: Build Release x64
+        shell: pwsh
+        run: |
+          # Kalau .sln ada di root ZIP (seperti file yang kamu kirim)
+          msbuild "New-Project.sln" /p:Configuration=Release /p:Platform=x64
+
+          # Kalau nanti ternyata .sln ada di subfolder, ganti jadi:
+          # msbuild "New-Project/New-Project.sln" /p:Configuration=Release /p:Platform=x64
+
+      - name: Upload artifact (exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: New-Project-Release-x64
+          path: |
+            New-Project/x64/Release/*.exe
