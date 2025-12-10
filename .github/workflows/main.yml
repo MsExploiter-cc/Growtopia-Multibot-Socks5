@@ -1,4 +1,4 @@
-name: Build New-Project from ZIP
+name: Build New-Project from ZIP and send EXE to Telegram
 
 on:
   push:
@@ -19,29 +19,79 @@ jobs:
       - name: Extract New-Project.zip
         shell: pwsh
         run: |
-          # Hapus folder lama kalau ada (biar clean)
           if (Test-Path "New-Project") {
             Remove-Item -Recurse -Force "New-Project"
           }
 
-          # Extract ZIP ke workspace
+          if (-not (Test-Path "New-Project.zip")) {
+            Write-Error "File New-Project.zip tidak ditemukan di root repo."
+            exit 1
+          }
+
           Expand-Archive -Path "New-Project.zip" -DestinationPath "."
 
-          # Cek isi setelah extract (debug)
+          Write-Host "Isi folder setelah extract:"
           Get-ChildItem -Recurse
 
       - name: Build Release x64
         shell: pwsh
         run: |
-          # Kalau .sln ada di root ZIP (seperti file yang kamu kirim)
+          if (-not (Test-Path "New-Project.sln")) {
+            Write-Error "New-Project.sln tidak ditemukan di root. Jika ada di subfolder, ubah path msbuild."
+            exit 1
+          }
+
           msbuild "New-Project.sln" /p:Configuration=Release /p:Platform=x64
 
-          # Kalau nanti ternyata .sln ada di subfolder, ganti jadi:
-          # msbuild "New-Project/New-Project.sln" /p:Configuration=Release /p:Platform=x64
-
-      - name: Upload artifact (exe)
+      - name: Upload artifact (EXE)
         uses: actions/upload-artifact@v4
         with:
           name: New-Project-Release-x64
           path: |
             New-Project/x64/Release/*.exe
+
+      - name: Send EXE to Telegram
+        shell: pwsh
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if (-not $env:TELEGRAM_BOT_TOKEN) {
+            Write-Error "Secret TELEGRAM_BOT_TOKEN belum di-set."
+            exit 1
+          }
+          if (-not $env:TELEGRAM_CHAT_ID) {
+            Write-Error "Secret TELEGRAM_CHAT_ID belum di-set."
+            exit 1
+          }
+
+          $exe = Get-ChildItem -Path "New-Project/x64/Release" -Filter "*.exe" -File -Recurse | Select-Object -First 1
+
+          if (-not $exe) {
+            Write-Error "File EXE tidak ditemukan di New-Project/x64/Release."
+            exit 1
+          }
+
+          Write-Host "Mengirim file:" $exe.FullName
+
+          $url = "https://api.telegram.org/bot$($env:TELEGRAM_BOT_TOKEN)/sendDocument"
+
+          $form = @{
+            chat_id = $env:TELEGRAM_CHAT_ID
+            document = Get-Item $exe.FullName
+            caption = "Build terbaru: $($exe.Name)"
+          }
+
+          try {
+            $response = Invoke-RestMethod -Uri $url -Method Post -Form $form
+            Write-Host "Berhasil mengirim ke Telegram. Message ID:" $response.result.message_id
+          }
+          catch {
+            Write-Error "Gagal mengirim ke Telegram: $($_.Exception.Message)"
+            if ($_.Exception.Response -ne $null) {
+              $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+              $responseBody = $reader.ReadToEnd()
+              Write-Error "Response body: $responseBody"
+            }
+            exit 1
+          }
