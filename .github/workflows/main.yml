@@ -33,6 +33,44 @@ jobs:
           Write-Host "Isi folder setelah extract:"
           Get-ChildItem -Recurse
 
+      - name: Install 7zip (for .rar vendor)
+        shell: pwsh
+        run: |
+          choco install 7zip -y
+          "$((Get-Command 7z).Source)" | Write-Host
+
+      - name: Extract vendor .rar (imgui, enet, lua)
+        shell: pwsh
+        run: |
+          $sevenZip = (Get-Command 7z).Source
+          if (-not $sevenZip) {
+            Write-Error "7z.exe tidak ditemukan."
+            exit 1
+          }
+
+          $base = "New-Project/vendor"
+
+          $archives = @(
+            "imgui.rar",
+            "enet.rar",
+            "lua.rar"
+          )
+
+          foreach ($arc in $archives) {
+            $arcPath = Join-Path $base $arc
+            if (Test-Path $arcPath) {
+              $outDir = Join-Path $base ([System.IO.Path]::GetFileNameWithoutExtension($arc))
+              Write-Host "Extract $arcPath -> $outDir"
+              New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+              & $sevenZip x $arcPath "-o$outDir" -y
+            } else {
+              Write-Warning "Archive tidak ditemukan: $arcPath"
+            }
+          }
+
+          Write-Host "Cek isi vendor setelah extract:"
+          Get-ChildItem -Recurse "New-Project/vendor"
+
       - name: Build Release x64
         shell: pwsh
         run: |
