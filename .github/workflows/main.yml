@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_dispatch:  # supaya bisa dijalankan manual dari tab Actions
 
 jobs:
   build:
@@ -32,104 +33,6 @@ jobs:
 
           Write-Host "Isi folder setelah extract:"
           Get-ChildItem -Recurse
-
-      - name: Install 7zip (for .rar vendor)
-        shell: pwsh
-        run: |
-          choco install 7zip -y
-          $sevenZip = Get-Command 7z -ErrorAction SilentlyContinue
-          if (-not $sevenZip) {
-            Write-Error "7z.exe tidak ditemukan setelah install. Step ini wajib sukses."
-            exit 1
-          }
-          Write-Host "7z path:" $sevenZip.Source
-
-      - name: Extract vendor .rar and fix layout
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = "Stop"
-
-          $sevenZip = (Get-Command 7z).Source
-          $base = "New-Project/vendor"
-
-          if (-not (Test-Path $base)) {
-            Write-Error "Folder vendor tidak ditemukan di New-Project/vendor."
-            exit 1
-          }
-
-          # 1) Extract semua .rar ke vendor/ (bukan ke subfolder)
-          $archives = Get-ChildItem -Path $base -Filter "*.rar" -File
-          if (-not $archives) {
-            Write-Warning "Tidak ada file .rar di vendor. Lewati extract."
-          } else {
-            foreach ($arc in $archives) {
-              Write-Host "Extract $($arc.FullName) -> $base"
-              & $sevenZip x $arc.FullName "-o$base" -y | Write-Host
-            }
-          }
-
-          Write-Host "Isi vendor setelah extract:"
-          Get-ChildItem -Recurse $base
-
-          # 2) Pastikan ENet di vendor/enet/include/enet.h
-          $enetIncludeDir = Join-Path $base "enet/include"
-          $enetHeaderTarget = Join-Path $enetIncludeDir "enet.h"
-          if (-not (Test-Path $enetHeaderTarget)) {
-            $enetHeader = Get-ChildItem -Path $base -Filter "enet.h" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($enetHeader) {
-              Write-Host "Menemukan enet.h di $($enetHeader.FullName), copy ke $enetHeaderTarget"
-              New-Item -ItemType Directory -Force -Path $enetIncludeDir | Out-Null
-              Copy-Item $enetHeader.FullName -Destination $enetHeaderTarget -Force
-            } else {
-              Write-Warning "enet.h tidak ditemukan di vendor. ENet include akan tetap error."
-            }
-          } else {
-            Write-Host "enet.h sudah ada di $enetHeaderTarget"
-          }
-
-          # 3) Pastikan Lua di vendor/lua/lua.hpp
-          $luaDir = Join-Path $base "lua"
-          $luaHeaderTarget = Join-Path $luaDir "lua.hpp"
-          if (-not (Test-Path $luaHeaderTarget)) {
-            $luaHeader = Get-ChildItem -Path $base -Filter "lua.hpp" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($luaHeader) {
-              Write-Host "Menemukan lua.hpp di $($luaHeader.FullName), copy ke $luaHeaderTarget"
-              New-Item -ItemType Directory -Force -Path $luaDir | Out-Null
-              Copy-Item $luaHeader.FullName -Destination $luaHeaderTarget -Force
-            } else {
-              Write-Warning "lua.hpp tidak ditemukan di vendor. Lua include akan tetap error."
-            }
-          } else {
-            Write-Host "lua.hpp sudah ada di $luaHeaderTarget"
-          }
-
-          # 4) Pastikan ImGui di vendor/imgui/*
-          $imguiDir = Join-Path $base "imgui"
-          if (-not (Test-Path $imguiDir)) {
-            New-Item -ItemType Directory -Force -Path $imguiDir | Out-Null
-          }
-
-          $imguiHeaderTarget = Join-Path $imguiDir "imgui.h"
-          if (-not (Test-Path $imguiHeaderTarget)) {
-            $imguiHeader = Get-ChildItem -Path $base -Filter "imgui.h" -Recurse -File -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($imguiHeader) {
-              Write-Host "Menemukan imgui.h di $($imguiHeader.FullName), copy semua imgui*.* ke $imguiDir"
-              # Copy semua file imgui*.h & imgui*.cpp dari folder sumber ke vendor/imgui
-              Get-ChildItem -Path $imguiHeader.Directory.FullName -Filter "imgui*.h" -File | ForEach-Object {
-                Copy-Item $_.FullName -Destination $imguiDir -Force
-              }
-              Get-ChildItem -Path $imguiHeader.Directory.FullName -Filter "imgui*.cpp" -File | ForEach-Object {
-                Copy-Item $_.FullName -Destination $imguiDir -Force
-              }
-            } else {
-              Write-Warning "imgui.h tidak ditemukan di vendor. ImGui include/source akan tetap error."
-            }
-          } else {
-            Write-Host "imgui.h sudah ada di $imguiHeaderTarget"
-          }
-
-          Write-Host "Final layout vendor:"
-          Get-ChildItem -Recurse $base
 
       - name: Build Release x64
         shell: pwsh
