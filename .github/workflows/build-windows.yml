@@ -25,15 +25,20 @@ jobs:
     - name: Extract Vendor Libraries
       shell: powershell
       run: |
-        cd New-Project\vendor
-        if (Test-Path "enet.rar") {
-          7z x enet.rar -aoa
-        }
-        if (Test-Path "imgui.rar") {
-          7z x imgui.rar -aoa
-        }
-        if (Test-Path "lua.rar") {
-          7z x lua.rar -aoa
+        # Check if vendor directory exists
+        if (Test-Path "New-Project/vendor") {
+          cd New-Project/vendor
+          if (Test-Path "enet.rar") {
+            7z x enet.rar -aoa
+          }
+          if (Test-Path "imgui.rar") {
+            7z x imgui.rar -aoa
+          }
+          if (Test-Path "lua.rar") {
+            7z x lua.rar -aoa
+          }
+        } else {
+          Write-Host "Vendor directory not found - assuming pre-extracted or not needed"
         }
     
     - name: Build with MSBuild (x64)
