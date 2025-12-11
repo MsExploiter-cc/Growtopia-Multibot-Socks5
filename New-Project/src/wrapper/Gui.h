@@ -4,6 +4,8 @@
 #include "d3d9_stub.h"
 
 #include "../vendor/imgui/imgui.h"
+#include "../vendor/imgui/imgui_impl_dx9.h"
+#include "../vendor/imgui/imgui_impl_win32.h"
 #include "../windows_compat.h"
 
 #include <chrono>
