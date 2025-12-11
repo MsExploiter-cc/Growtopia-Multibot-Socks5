@@ -15,7 +15,7 @@ jobs:
         build-type: [Release, Debug]
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
@@ -41,7 +41,7 @@ jobs:
         msbuild New-Project/New-Project.vcxproj /p:Configuration=${{ matrix.build-type }} /p:Platform=x64 /p:PlatformToolset=v143 /m
     
     - name: Upload Artifacts (${{ matrix.build-type }})
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: GrowtopiBot-${{ matrix.build-type }}-x64
         path: New-Project/x64/${{ matrix.build-type }}/
@@ -53,10 +53,10 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Download Release Build
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: GrowtopiBot-Release-x64
         path: ./release-artifacts/
