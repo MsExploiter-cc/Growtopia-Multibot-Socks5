@@ -1,0 +1,3 @@
+/workspaces/Growtopia-Multibot-Socks5/build/CMakeFiles/GrowtopiBot.dir
+/workspaces/Growtopia-Multibot-Socks5/build/CMakeFiles/edit_cache.dir
+/workspaces/Growtopia-Multibot-Socks5/build/CMakeFiles/rebuild_cache.dir
