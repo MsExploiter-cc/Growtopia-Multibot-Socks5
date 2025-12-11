@@ -25,6 +25,9 @@ jobs:
     - name: Install OpenSSL
       run: |
         choco install openssl -y
+        echo "OPENSSL_DIR=C:\Program Files\OpenSSL" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "INCLUDE=%INCLUDE%;C:\Program Files\OpenSSL\include" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+        echo "LIB=%LIB%;C:\Program Files\OpenSSL\lib" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
     
     - name: Extract Vendor Libraries
       shell: powershell
