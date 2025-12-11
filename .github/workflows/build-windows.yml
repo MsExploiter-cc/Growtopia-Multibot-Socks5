@@ -1,0 +1,69 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        build-type: [Release, Debug]
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+      with:
+        msbuild-version: latest
+    
+    - name: Extract Vendor Libraries
+      shell: powershell
+      run: |
+        cd New-Project\vendor
+        if (Test-Path "enet.rar") {
+          7z x enet.rar -aoa
+        }
+        if (Test-Path "imgui.rar") {
+          7z x imgui.rar -aoa
+        }
+        if (Test-Path "lua.rar") {
+          7z x lua.rar -aoa
+        }
+    
+    - name: Build with MSBuild (x64)
+      run: |
+        msbuild New-Project/New-Project.vcxproj /p:Configuration=${{ matrix.build-type }} /p:Platform=x64 /p:PlatformToolset=v143 /m
+    
+    - name: Upload Artifacts (${{ matrix.build-type }})
+      uses: actions/upload-artifact@v3
+      with:
+        name: GrowtopiBot-${{ matrix.build-type }}-x64
+        path: New-Project/x64/${{ matrix.build-type }}/
+        retention-days: 30
+
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Download Release Build
+      uses: actions/download-artifact@v3
+      with:
+        name: GrowtopiBot-Release-x64
+        path: ./release-artifacts/
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release-artifacts/**
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
