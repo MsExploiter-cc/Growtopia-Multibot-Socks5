@@ -43,7 +43,7 @@ jobs:
     
     - name: Build with MSBuild (x64)
       run: |
-        msbuild New-Project/New-Project.vcxproj /p:Configuration=${{ matrix.build-type }} /p:Platform=x64 /p:PlatformToolset=v143 /m
+        msbuild New-Project/New-Project.vcxproj /p:Configuration=${{ matrix.build-type }} /p:Platform=x64 /p:PlatformToolset=v143 /m /verbosity:detailed
     
     - name: Upload Artifacts (${{ matrix.build-type }})
       uses: actions/upload-artifact@v4
