@@ -22,6 +22,10 @@ jobs:
       with:
         msbuild-version: latest
     
+    - name: Install OpenSSL
+      run: |
+        choco install openssl -y
+    
     - name: Extract Vendor Libraries
       shell: powershell
       run: |
